@@ -1,62 +1,39 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
 import Link from "next/link"
 
-const UNSPLASH_ACCESS_KEY = "Ekhz2I0y-jtO48lGAJ73Wg7DPoaxLHZ-ktJfFHm0Nuw"
-const NUMBER_OF_IMAGES = 5
-const ROTATION_INTERVAL = 10000 // 10 seconds
-
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [backgroundImages, setBackgroundImages] = useState<string[]>([])
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null)
   const router = useRouter()
+  const { login } = useAuth()
 
   useEffect(() => {
-    fetchBackgroundImages()
+    // Load a random police-related image
+    setBackgroundImage("/placeholder.svg?height=1080&width=1920")
   }, [])
-
-  useEffect(() => {
-    if (backgroundImages.length > 0) {
-      const interval = setInterval(() => {
-        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length)
-      }, ROTATION_INTERVAL)
-
-      return () => clearInterval(interval)
-    }
-  }, [backgroundImages])
-
-  const fetchBackgroundImages = async () => {
-    try {
-      const response = await fetch(
-        `https://api.unsplash.com/photos/random?query=police&count=${NUMBER_OF_IMAGES}&client_id=${UNSPLASH_ACCESS_KEY}`,
-      )
-      const data = await response.json()
-      setBackgroundImages(data.map((image: any) => image.urls.regular))
-    } catch (error) {
-      console.error("Error fetching background images:", error)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const result = await login(email, password)
 
-    if (error) {
-      setError(error.message)
+    if (!result.success) {
+      setError(result.error || "Une erreur est survenue lors de la connexion")
     } else {
       router.push("/dashboard")
     }
@@ -66,27 +43,20 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left column with rotating background images */}
+      {/* Left column with background image */}
       <div className="hidden md:block md:w-1/2 relative overflow-hidden">
-        {backgroundImages.map((image, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              index === currentImageIndex ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <Image
-              src={image || "/placeholder.svg"}
-              alt={`Police background ${index + 1}`}
-              layout="fill"
-              objectFit="cover"
-              quality={100}
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <h1 className="text-4xl font-bold text-white">Cahier de Veille</h1>
-            </div>
+        <div className="absolute inset-0">
+          <Image
+            src={backgroundImage || "/placeholder.svg"}
+            alt="Police background"
+            layout="fill"
+            objectFit="cover"
+            quality={100}
+          />
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <h1 className="text-4xl font-bold text-white">Cahier de Veille</h1>
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Right column with login form */}
@@ -94,7 +64,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-removebg-preview-NRXNNyOrizzUkvylW7LM9LmNIFfGlX.png"
+              src="/placeholder.svg?height=150&width=150"
               alt="Police de Charleroi"
               width={150}
               height={150}

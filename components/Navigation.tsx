@@ -2,44 +2,18 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
-import type { User } from "@supabase/supabase-js"
+import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { LogOut } from "lucide-react"
 
 export function Navigation() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [newEventTitle, setNewEventTitle] = useState("")
-  const [isNewEventDialogOpen, setIsNewEventDialogOpen] = useState(false)
-
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
-
-    return () => {
-      authListener.subscription.unsubscribe()
-    }
-  }, [])
+  const { user, logout } = useAuth()
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await logout()
     router.push("/")
-  }
-
-  const handleNewEventSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newEventTitle.trim()) {
-      router.push(`/new-cahier?title=${encodeURIComponent(newEventTitle.trim())}`)
-    }
-    setIsNewEventDialogOpen(false)
   }
 
   return (
@@ -48,7 +22,7 @@ export function Navigation() {
         <div className="flex items-center gap-4">
           <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-4">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-removebg-preview-NRXNNyOrizzUkvylW7LM9LmNIFfGlX.png"
+              src="/placeholder.svg?height=40&width=40"
               alt="Police de Charleroi"
               width={40}
               height={40}
@@ -61,7 +35,6 @@ export function Navigation() {
           {user ? (
             <>
               <div className="flex items-center space-x-4">
-                {/* Removed repeated "Nouveau Cahier" button */}
                 <Link href="/dashboard" className="text-white hover:text-gray-300">
                   Tableau de bord
                 </Link>
