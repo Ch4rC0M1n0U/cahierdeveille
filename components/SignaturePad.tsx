@@ -45,3 +45,4 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, width = 300, height
 }
 
 export default SignaturePad
+

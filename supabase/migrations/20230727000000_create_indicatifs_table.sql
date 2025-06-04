@@ -25,3 +25,4 @@ CREATE TRIGGER update_indicatifs_updated_at
 BEFORE UPDATE ON indicatifs
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+

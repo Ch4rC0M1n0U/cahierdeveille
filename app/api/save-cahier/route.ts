@@ -1,56 +1,29 @@
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
-import { cookies } from "next/headers"
-import { verifyToken } from "@/lib/db"
+import { supabase } from "@/lib/supabase"
 
 export async function POST(req: Request) {
   if (req.method === "POST") {
     try {
-      // Verify authentication
-      const token = cookies().get("auth-token")?.value
-      if (!token) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
-      }
-
-      const payload = verifyToken(token)
-      if (!payload) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
-      }
-
       const { eventDetails, communications } = await req.json()
-      const db = await getDb()
 
-      // Insert event details
-      const result = await db.run(
-        `INSERT INTO cahiers_de_veille 
-        (evenement, redacteur, poste, frequence, responsable, user_id) 
-        VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          eventDetails.evenement,
-          eventDetails.redacteur,
-          eventDetails.poste,
-          eventDetails.frequence,
-          eventDetails.responsable,
-          payload.id,
-        ],
-      )
+      // Insérer les détails de l'événement
+      const { data: cahierData, error: cahierError } = await supabase
+        .from("cahiers_de_veille")
+        .insert([eventDetails])
+        .select()
 
-      const cahierId = result.lastID
+      if (cahierError) throw cahierError
 
-      // Insert communications
-      for (const comm of communications) {
-        await db.run(
-          `INSERT INTO communications 
-          (cahier_id, appele, appelant, heure, communication) 
-          VALUES (?, ?, ?, ?, ?)`,
-          [cahierId, comm.appele, comm.appelant, comm.heure, comm.communication],
-        )
-      }
+      const cahierId = cahierData[0].id
 
-      return NextResponse.json({
-        success: true,
-        data: { id: cahierId, ...eventDetails, communications },
-      })
+      // Insérer les communications
+      const { error: communicationsError } = await supabase
+        .from("communications")
+        .insert(communications.map((comm) => ({ ...comm, cahier_id: cahierId })))
+
+      if (communicationsError) throw communicationsError
+
+      return NextResponse.json({ success: true, data: { id: cahierId, ...eventDetails, communications } })
     } catch (error) {
       console.error("Error saving cahier:", error)
       return NextResponse.json({ success: false, error: "Error saving cahier" }, { status: 500 })
@@ -59,3 +32,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Method not allowed" }, { status: 405 })
   }
 }
+

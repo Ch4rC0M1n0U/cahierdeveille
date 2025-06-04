@@ -93,3 +93,4 @@ export function IndicatifsManager({ cahierId, initialIndicatifs, onUpdate }: Ind
     </div>
   )
 }
+

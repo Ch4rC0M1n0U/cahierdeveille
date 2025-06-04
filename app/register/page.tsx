@@ -1,10 +1,8 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -26,7 +24,6 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { register } = useAuth()
 
   const validateEmail = (email: string) => {
     const regex = /@police\.belgium\.eu$/
@@ -76,24 +73,41 @@ export default function Register() {
     setLoading(true)
 
     try {
-      const result = await register({
+      const { error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        operator: formData.operator,
-        matricule: formData.matricule,
-        service: formData.service,
+        options: {
+          data: {
+            operator_name: formData.operator,
+            matricule: formData.matricule,
+            service: formData.service,
+          },
+        },
       })
 
-      if (!result.success) {
-        setError(result.error || "Une erreur est survenue lors de l'inscription")
-      } else {
-        setError("Inscription réussie. Vous pouvez maintenant vous connecter.")
-        setTimeout(() => {
-          router.push("/")
-        }, 3000)
+      if (signUpError) throw signUpError
+
+      // Create profile entry
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { error: profileError } = await supabase.from("profiles").upsert({
+          id: user.id,
+          redacteur_name: formData.operator,
+          matricule: formData.matricule,
+          service: formData.service,
+        })
+
+        if (profileError) throw profileError
       }
+
+      setError("Vérifiez votre email pour confirmer votre inscription.")
+      setTimeout(() => {
+        router.push("/login")
+      }, 3000)
     } catch (error) {
-      setError("Une erreur est survenue lors de l'inscription")
+      setError(error.message)
     } finally {
       setLoading(false)
     }
@@ -104,7 +118,7 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <Image
-            src="/placeholder.svg?height=150&width=150"
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-removebg-preview-NRXNNyOrizzUkvylW7LM9LmNIFfGlX.png"
             alt="Police de Charleroi"
             width={150}
             height={150}
@@ -215,3 +229,4 @@ export default function Register() {
     </div>
   )
 }
+
