@@ -32,4 +32,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Method not allowed" }, { status: 405 })
   }
 }
-
