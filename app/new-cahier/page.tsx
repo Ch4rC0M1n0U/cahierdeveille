@@ -25,15 +25,26 @@ function NewCahierContent() {
         data: { user },
       } = await supabase.auth.getUser()
       if (user) {
+        // Essayer de récupérer le profil existant
         const { data, error } = await supabase.from("profiles").select("redacteur_name").eq("id", user.id).single()
 
-        if (error) throw error
-        if (data && data.redacteur_name) {
+        if (error) {
+          // Si le profil n'existe pas, on utilise les métadonnées de l'utilisateur
+          if (error.code === "PGRST116") {
+            console.log("Profil non trouvé, utilisation des métadonnées utilisateur")
+            if (user.user_metadata?.operator_name) {
+              setRedacteur(user.user_metadata.operator_name)
+            }
+          } else {
+            throw error
+          }
+        } else if (data && data.redacteur_name) {
           setRedacteur(data.redacteur_name)
         }
       }
     } catch (error) {
       console.error("Error fetching redacteur name:", error)
+      // En cas d'erreur, on continue sans nom de rédacteur
     }
   }
 

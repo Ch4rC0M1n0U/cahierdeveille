@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import Link from "next/link"
@@ -109,12 +111,27 @@ export default function Dashboard() {
   }, [])
 
   const getRedacteurName = async (userId) => {
-    const { data, error } = await supabase.from("profiles").select("redacteur_name").eq("id", userId).single()
+    try {
+      const { data, error } = await supabase.from("profiles").select("redacteur_name").eq("id", userId).single()
 
-    if (error) {
+      if (error) {
+        if (error.code === "PGRST116") {
+          console.log("Profil non trouvé pour l'utilisateur")
+          // Essayer de récupérer depuis les métadonnées utilisateur
+          const {
+            data: { user },
+          } = await supabase.auth.getUser()
+          if (user?.user_metadata?.operator_name) {
+            setRedacteurName(user.user_metadata.operator_name)
+          }
+        } else {
+          console.error("Error fetching redacteur name:", error)
+        }
+      } else if (data && data.redacteur_name) {
+        setRedacteurName(data.redacteur_name)
+      }
+    } catch (error) {
       console.error("Error fetching redacteur name:", error)
-    } else if (data) {
-      setRedacteurName(data.redacteur_name)
     }
   }
 
